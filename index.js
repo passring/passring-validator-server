@@ -127,7 +127,7 @@ app.patch('/vote/:vote_id', checkAdminAccess, async (req, res) => {
     }
 
     const inputSchema = z.object({
-        active: z.boolean(),
+        active: z.boolean().optional(),
         allowed_participants: z.array(z.string()).optional(),
         allow_all: z.boolean().optional(),
     });
@@ -203,10 +203,13 @@ app.post('/vote/:vote_id/ring/:public_key', async (req, res) => {
     const voteId = req.params.vote_id
     const publicKey = req.params.public_key
 
-
     let vote = (await db.select().from(schema.votings).where(eq(schema.votings.id, voteId)))[0];
     if (!vote) {
         res.status(404).send('Vote not found')
+        return
+    }
+    if (vote.active === false) {
+        res.status(403).send('Vote is not active')
         return
     }
     vote = {
@@ -219,7 +222,7 @@ app.post('/vote/:vote_id/ring/:public_key', async (req, res) => {
     });
 
     if (!inputSchema.safeParse(req.body)) {
-        res.status(400).send('Invalid body')
+        res.status(400).send(inputSchema.safeParse(req.body).error)
         return
     }
     const input = inputSchema.parse(req.body);
@@ -235,7 +238,7 @@ app.post('/vote/:vote_id/ring/:public_key', async (req, res) => {
         return
     }
 
-    if (vote.allowed_participants.length > 0 && !vote.allowed_participants.includes(user.email)) {
+    if (!vote.allow_all && !vote.allowed_participants.some(email => email.toLowerCase() === user.email.toLowerCase())) {
         res.status(403).send('Access denied')
         return
     }
