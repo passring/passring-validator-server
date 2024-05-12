@@ -8,6 +8,8 @@ RUN npm install
 
 COPY . .
 
+RUN chmod +x /usr/src/app/run.sh
+
 EXPOSE 3000
 
-ENTRYPOINT ["run.sh"]
+ENTRYPOINT ["/usr/src/app/run.sh"]
